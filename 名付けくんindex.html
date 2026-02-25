@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ランダム名付けくん</title>
+  <style>
+    :root{
+      --bg:#f6f8fc;
+      --card:#fff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --primary:#2563eb;
+      --primary-hover:#1d4ed8;
+      --subbtn:#eef2ff;
+      --subbtn-border:#c7d2fe;
+      --error:#dc2626;
+      --ok:#065f46;
+      --ok-bg:#ecfdf5;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      padding:16px;
+    }
+    .app{
+      width:100%;
+      max-width:820px;
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:0 14px 30px rgba(0,0,0,.06);
+      padding:20px;
+    }
+    h1{ margin:0 0 6px; font-size:1.45rem; text-align:center; }
+    .lead{
+      margin:0 0 16px;
+      text-align:center;
+      color:var(--muted);
+      font-size:.95rem;
+      line-height:1.55;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    .field{ margin-bottom:12px; }
+    .field.full{ grid-column:1 / -1; }
+    label{
+      display:block;
+      margin-bottom:6px;
+      font-weight:700;
+      font-size:.92rem;
+    }
+    input[type="text"], select{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:11px 12px;
+      font-size:1rem;
+      background:#fff;
+      color:var(--text);
+      outline:none;
+    }
+    input[type="text"]:focus, select:focus{
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(37,99,235,.12);
+    }
+    .radio-group{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:10px 12px;
+      cursor:pointer;
+      background:#fff;
+      user-select:none;
+    }
+    .chip input{ margin:0; cursor:pointer; }
+    .inline-options{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:2px;
+    }
+    .tag{
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:8px 10px;
+      font-size:.85rem;
+      color:var(--muted);
+      background:#fafafa;
+    }
+    .actions{
+      display:grid;
+      grid-template-columns:1.2fr 1fr 1fr;
+      gap:10px;
+      margin-top:8px;
+    }
+    button{
+      border:none;
+      border-radius:10px;
+      padding:12px 14px;
+      font-size:.98rem;
+      font-weight:800;
+      cursor:pointer;
+      transition:background .2s ease, transform .03s ease, opacity .2s ease;
+    }
+    button:active{ transform:translateY(1px); }
+    .btn-primary{ background:var(--primary); color:#fff; }
+    .btn-primary:hover{ background:var(--primary-hover); }
+    .btn-sub{
+      background:var(--subbtn);
+      color:#3730a3;
+      border:1px solid var(--subbtn-border);
+    }
+    .btn-sub:hover{ background:#e0e7ff; }
+    .btn-ghost{
+      background:#fff;
+      color:#374151;
+      border:1px solid var(--line);
+    }
+    .btn-ghost:hover{ background:#f9fafb; }
+
+    .status{
+      margin-top:10px;
+      min-height:1.25em;
+      font-size:.9rem;
+    }
+    .status.error{ color:var(--error); }
+    .status.ok{ color:var(--ok); }
+
+    .result-box{
+      margin-top:14px;
+      border:1px dashed #cbd5e1;
+      border-radius:12px;
+      background:#f8fafc;
+      padding:12px;
+    }
+    .result-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      margin-bottom:8px;
+      color:var(--muted);
+      font-size:.86rem;
+      flex-wrap:wrap;
+    }
+    .counter{
+      background:var(--ok-bg);
+      color:var(--ok);
+      border:1px solid #a7f3d0;
+      border-radius:999px;
+      padding:4px 8px;
+      font-weight:700;
+      font-size:.78rem;
+    }
+    .result-list{
+      display:grid;
+      gap:8px;
+      margin:0;
+      padding:0;
+      list-style:none;
+    }
+    .result-item{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px 12px;
+    }
+    .full-name{
+      font-size:1.08rem;
+      font-weight:800;
+      word-break:break-word;
+    }
+    .name-meta{
+      font-size:.78rem;
+      color:var(--muted);
+      margin-top:4px;
+    }
+    .copy-btn{
+      font-size:.85rem;
+      font-weight:700;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid var(--line);
+      background:#fff;
+      cursor:pointer;
+      color:#374151;
+      white-space:nowrap;
+      min-width:72px;
+    }
+    .copy-btn:hover{ background:#f9fafb; }
+
+    .footer-note{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:.8rem;
+      line-height:1.5;
+    }
+
+    details{
+      margin-top:12px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#fff;
+      padding:8px 10px;
+    }
+    summary{
+      cursor:pointer;
+      font-weight:700;
+      font-size:.9rem;
+    }
+    .debug{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:.85rem;
+      line-height:1.5;
+    }
+
+    @media (max-width: 700px){
+      .grid{ grid-template-columns:1fr; }
+      .actions{ grid-template-columns:1fr; }
+      .result-item{ align-items:flex-start; flex-direction:column; }
+      .copy-btn{ width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>ランダム名付けくん</h1>
+    <p class="lead">
+      苗字と性別を入力すると、ランダムで名前を生成します。</p>
+
+    <section class="grid" aria-label="入力フォーム">
+      <div class="field full">
+        <label for="surname">苗字（必須）</label>
+        <input id="surname" type="text" maxlength="20" placeholder="例：大田" autocomplete="family-name" />
+      </div>
+
+      <div class="field">
+        <label>性別（必須）</label>
+        <div class="radio-group" role="radiogroup" aria-label="性別">
+          <label class="chip"><input type="radio" name="gender" value="male" /> 男</label>
+          <label class="chip"><input type="radio" name="gender" value="female" /> 女</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="countSelect">表示件数</label>
+        <select id="countSelect">
+          <option value="1">1件</option>
+          <option value="3" selected>3件</option>
+          <option value="5">5件</option>
+          <option value="10">10件</option>
+        </select>
+      </div>
+
+      <div class="field full">
+        <label for="styleSelect">名前の雰囲気（任意）</label>
+        <select id="styleSelect">
+          <option value="all" selected>すべて（おすすめ）</option>
+          <option value="modern">現代風寄り</option>
+          <option value="classic">古風寄り</option>
+          <option value="soft">やさしい印象</option>
+        </select>
+      </div>
+    </section>
+
+    <div class="inline-options" aria-label="補助情報">
+      <div class="tag" id="maleCountTag">男候補: 計算中...</div>
+      <div class="tag" id="femaleCountTag">女候補: 計算中...</div>
+      <div class="tag">基本2文字＋古風接尾辞対応</div>
+      <div class="tag">コピー機能つき</div>
+    </div>
+
+    <div class="actions">
+      <button id="generateBtn" class="btn-primary" type="button">名前を生成する</button>
+      <button id="rerollBtn" class="btn-sub" type="button">もう一回</button>
+      <button id="clearBtn" class="btn-ghost" type="button">結果をクリア</button>
+    </div>
+
+    <div id="status" class="status" aria-live="polite"></div>
+
+    <section class="result-box" aria-live="polite" aria-label="生成結果">
+      <div class="result-head">
+        <span>生成結果</span>
+        <span id="resultCounter" class="counter">0件表示</span>
+      </div>
+      <ul id="resultList" class="result-list">
+        <li class="result-item">
+          <div>
+            <div class="full-name">ここに名前が表示されます</div>
+            <div class="name-meta">基本は2文字名で生成されます</div>
+          </div>
+          <button class="copy-btn" type="button" disabled>コピー</button>
+        </li>
+      </ul>
+    </section>
+
+    <details>
+      <summary>仕様メモ（展開）</summary>
+      <div class="debug" id="debugInfo">候補生成中...</div>
+    </details>
+
+    <p class="footer-note">
+      ※ ランダム候補です。実際の名付けでは、読みやすさ・意味・字面・画数・家族の希望などもあわせて確認してください。
+    </p>
+  </main>
+
+  <script>
+    // =========================================================
+    // ランダム名付けくん（完成版）
+    // 仕様：
+    // - 基本は2文字名
+    // - 例外として「1文字 + 接尾辞（太郎/一郎/之助/次郎...）」を許可
+    // - 数千件候補（固定候補 + 組み合わせ）
+    // =========================================================
+
+    // ---------- 固定候補（自然さ重視） ----------
+    const fixedNames = {
+      male: [
+        "悠真","湊","蒼","陽翔","蓮","樹","颯太","大和","悠斗","朝陽","晴人","陸","結翔","直樹","優希","健太",
+        "海斗","拓真","翔太","慶","隼人","匠","和真","凌","悠人","誠","光希","奏太","一真","蒼真","瑛太","伊織",
+        "律","朔","新","悠生","陽太","颯","千翔","理玖","壮真","湊斗","悠翔","仁","大翔","岳","叶翔","悠吾",
+        "晴翔","結人","蒼空","晴","優斗","櫂","成海","凪","怜","楓真","朝翔","智也","雄大","創","翔","蒼太",
+        "悠太","大輝","駿","慎太郎","康平","航","航大","涼介","龍之介","悠馬","玲央","樹生","晴斗","想","颯真","蒼介",
+        "蓮斗","一樹","直人","遥斗","蒼大","悠介","郁人","瑛斗","奏","優真","隆太","真斗","悠成","優成","俊介","拓海",
+        "大地","翔真","理人","琉生","琉斗","颯人","湊人","敬太","克己","恒一","修平","悠一","真一","和也","達也","公平",
+        "圭介","秀人","聡","泰成","悠磨","宗一郎","啓太","貴大","智紀","英樹","雅人","凛太郎","奏介","陽向","蒼司","晴希"
+      ],
+      female: [
+        "陽菜","凛","葵","結菜","芽依","紬","莉子","美月","さくら","結衣","彩花","心春","詩","杏奈","優奈","千尋",
+        "楓","美咲","和花","琴葉","菜々","真央","朱里","玲奈","夏帆","遥","ひまり","愛菜","結月","春菜","美優","七海",
+        "莉央","花音","結愛","澪","咲良","柚葉","凪咲","優衣","紗良","凜花","佳奈","里奈","桃花","瑠奈","実乃里","未央",
+        "優花","愛美","美羽","碧","心結","結","美桜","彩乃","志帆","乃愛","花","彩夏","月乃","咲希","萌","優月",
+        "結華","莉奈","花凛","瑞希","柚月","愛梨","明日香","綾乃","小春","真帆","知花","玲","美玲","沙耶","千夏","文香",
+        "杏","優香","香織","美穂","佳苗","恵","由佳","真奈","理沙","静香","千紘","春香","彩","美里","遥香","絵里",
+        "未来","茜","若菜","菜月","美空","心菜","羽菜","ひなの","すず","みのり","こころ","つむぎ","あかり","はるか","詩織","彩葉",
+        "希","結子","麻衣","由奈","凪","悠花","璃子","琴音","栞","和奏","穂香","結乃","日菜","乃々花","涼花","花奈"
+      ]
+    };
+
+    // ---------- 組み合わせパーツ ----------
+    const parts = {
+      male: {
+        first: [
+          "悠","陽","蒼","晴","湊","海","大","優","颯","翔","蓮","樹","和","千","理","奏","光","直","岳","新",
+          "朔","凪","成","朝","拓","隼","玲","真","隆","智","康","航","遥","一","結","郁","創","瑛","叶","凌",
+          "匠","駿","敬","修","啓","貴","宗","英","雅","琉","景","空","陸","仁","泰","誠","秀","健","雄","克",
+          "天","星","慎","圭","達","祐","亮","巧","将","良","宏","源","武","清","秋","春","夏","冬","颯","煌"
+        ],
+        middle: [
+          "","", "", "", "", "", // 2文字名を多めに
+          "真","斗","太","希","人","生","翔","介","輝","成","吾","哉","紀","磨","司","助","平","馬"
+        ],
+        last: [
+          "真","斗","太","人","翔","介","希","馬","大","生","也","樹","成","吾","輝","空","汰","哉","紀","磨",
+          "司","助","平","一","陽","海","音","朗","貴","和","真","斗","人","成","翔","介","希","汰","亮","良"
+        ]
+      },
+      female: {
+        first: [
+          "陽","結","美","莉","彩","心","花","咲","優","愛","琴","柚","凛","紬","葵","澪","玲","桃","春","夏",
+          "秋","冬","月","乃","和","千","真","瑞","遥","詩","菜","芽","楓","杏","沙","文","里","瑠","羽","碧",
+          "明","綾","志","知","希","珠","穂","日","若","香","栞","涼","葉","実","光","紗","絵","奏","凪","結",
+          "心","陽","美","莉","彩","愛","和","清","幸","萌","華","望","空","海","雪","風","凜","柊","鈴","紫"
+        ],
+        middle: [
+          "","", "", "", "", "", // 2文字名を多めに
+          "菜","奈","花","音","月","乃","子","香","里","衣","羽","咲","華","穂","美","帆","織","希","葉","結"
+        ],
+        last: [
+          "菜","奈","花","音","月","乃","子","香","里","衣","羽","咲","華","穂","美","帆","織","希","葉","結",
+          "玲","夏","春","佳","実","依","愛","央","凛","和","萌","彩","詩","鈴","栞","紗","陽","海","空","心"
+        ]
+      }
+    };
+
+    // ---------- 古風接尾辞 ----------
+    // 1文字 + 以下の接尾辞は例外として許可
+    const SPECIAL_SUFFIXES = [
+      "太郎", "一郎", "之助",
+      "次郎", "三郎", "四郎", "五郎", "十郎",
+      "介", "助", "太", "平", "吉", "作", "蔵", "馬"
+    ];
+
+    // 特例名（主に男向け）を人工的に増やす
+    function buildSpecialSuffixNames() {
+      const stems = [
+        "健","蒼","湊","蓮","樹","凛","匠","岳","航","陸","悠","陽","海","新","朔",
+        "直","誠","隆","修","啓","宗","雅","玲","駿","拓","颯","翔","景","和","智",
+        "康","創","叶","仁","大","真","隼","朝","空","天","星","源","武","清","秋",
+        "春","夏","冬","良","亮","慎","圭","達","宏","将","巧","清","幸","清"
+      ];
+      const out = [];
+      for (const s of stems) {
+        for (const suf of SPECIAL_SUFFIXES) {
+          out.push(`${s}${suf}`);
+        }
+      }
+      return [...new Set(out)];
+    }
+
+    // ---------- 雰囲気フィルタ ----------
+    const styleRules = {
+      all: () => true,
+      modern: (name) => /[凛紬澪柚湊蒼颯琉瑠凪陽翔結心彩葵]/.test(name) || /^(悠|陽|蒼|凛|紬|柚|澪|結)/.test(name),
+      classic: (name) => {
+        if (isAllowedSpecialName(name)) return true; // 郎系・之助系を古風で出しやすく
+        return /[子香織穂平朗吉蔵作]/.test(name) || /^(和|千|文|雅|宗|啓|修|克|泰|源|武)/.test(name);
+      },
+      soft: (name) => /[花菜奈月乃羽衣結心咲春穂柚琴優愛美和彩萌葉鈴]/.test(name)
+    };
+
+    // ---------- NG候補 ----------
+    const ngNames = new Set([
+      "陽陽","花花","美美","真真","斗斗","菜菜","奈奈","子子","乃乃","希希",
+      "蒼蒼","翔翔","優優","愛愛","結結","凛凛","心心","彩彩","海海","空空"
+    ]);
+
+    // 連続重複回避用
+    let lastResultsKey = "";
+
+    // DOM
+    const el = {
+      surname: document.getElementById("surname"),
+      countSelect: document.getElementById("countSelect"),
+      styleSelect: document.getElementById("styleSelect"),
+      generateBtn: document.getElementById("generateBtn"),
+      rerollBtn: document.getElementById("rerollBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+      status: document.getElementById("status"),
+      resultList: document.getElementById("resultList"),
+      resultCounter: document.getElementById("resultCounter"),
+      maleCountTag: document.getElementById("maleCountTag"),
+      femaleCountTag: document.getElementById("femaleCountTag"),
+      debugInfo: document.getElementById("debugInfo")
+    };
+
+    // ---------- 共通ユーティリティ ----------
+    function getSelectedGender() {
+      const checked = document.querySelector('input[name="gender"]:checked');
+      return checked ? checked.value : "";
+    }
+
+    function unique(arr) {
+      return [...new Set(arr)];
+    }
+
+    function shuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function charLen(str) {
+      return [...str].length;
+    }
+
+    function setStatus(message = "", kind = "") {
+      el.status.textContent = message;
+      el.status.className = "status";
+      if (kind) el.status.classList.add(kind);
+    }
+
+    function styleLabel(value) {
+      const map = {
+        all: "すべて",
+        modern: "現代風寄り",
+        classic: "古風寄り",
+        soft: "やさしい印象"
+      };
+      return map[value] || value;
+    }
+
+    // ---------- 名前ルール判定 ----------
+    function isTwoCharName(name) {
+      return charLen(name) === 2;
+    }
+
+    function isAllowedSpecialName(name) {
+      // 1文字 + 特例接尾辞
+      for (const suffix of SPECIAL_SUFFIXES) {
+        if (name.endsWith(suffix)) {
+          const stem = name.slice(0, name.length - suffix.length);
+          return charLen(stem) === 1;
+        }
+      }
+      return false;
+    }
+
+    // ---------- 自然さフィルタ ----------
+    function isLikelyNatural(name, gender) {
+      if (!name || charLen(name) < 2 || charLen(name) > 5) return false;
+      if (ngNames.has(name)) return false;
+
+      // 同字連打を軽く防ぐ
+      if (/(.)\1\1/.test(name)) return false;
+      if (/(.)\1/.test(name) && charLen(name) <= 2) return false;
+
+      // 性別別の最低限ルール
+      if (gender === "male") {
+        if (name.endsWith("子")) return false;
+      } else {
+        if (/(太郎|一郎|次郎|三郎|四郎|五郎|十郎|之助|蔵)$/.test(name)) return false;
+      }
+
+      return true;
+    }
+
+    // ---------- 組み合わせ生成 ----------
+    function buildComposedNames(gender) {
+      const p = parts[gender];
+      const out = [];
+      for (const f of p.first) {
+        for (const m of p.middle) {
+          for (const l of p.last) {
+            const name = `${f}${m}${l}`;
+            if (isLikelyNatural(name, gender)) out.push(name);
+          }
+        }
+      }
+      return unique(out);
+    }
+
+    // ---------- 最終候補プール生成 ----------
+    function buildFinalPools() {
+      const maleComposed = buildComposedNames("male");
+      const femaleComposed = buildComposedNames("female");
+      const specialMale = buildSpecialSuffixNames();
+
+      const male = unique([...fixedNames.male, ...maleComposed, ...specialMale])
+        .filter(n => isLikelyNatural(n, "male"));
+
+      const female = unique([...fixedNames.female, ...femaleComposed])
+        .filter(n => isLikelyNatural(n, "female"));
+
+      return {
+        male: shuffle(male),
+        female: shuffle(female),
+        stats: {
+          maleFixed: fixedNames.male.length,
+          femaleFixed: fixedNames.female.length,
+          maleComposed: maleComposed.length,
+          femaleComposed: femaleComposed.length,
+          maleSpecial: specialMale.length
+        }
+      };
+    }
+
+    const pools = buildFinalPools();
+
+    // ---------- 抽選 ----------
+    function pickRandomUnique(arr, count, avoidSet = new Set()) {
+      const src = shuffle(arr);
+      const result = [];
+
+      for (const item of src) {
+        if (avoidSet.has(item)) continue;
+        result.push(item);
+        if (result.length >= count) break;
+      }
+
+      if (result.length < count) {
+        for (const item of src) {
+          if (result.includes(item)) continue;
+          result.push(item);
+          if (result.length >= count) break;
+        }
+      }
+
+      return result;
+    }
+
+    // ---------- 結果表示 ----------
+    function renderResults(fullNames) {
+      el.resultList.innerHTML = "";
+
+      if (!fullNames || fullNames.length === 0) {
+        el.resultList.innerHTML = `
+          <li class="result-item">
+            <div>
+              <div class="full-name">ここに名前が表示されます</div>
+              <div class="name-meta">基本は2文字名で生成されます</div>
+            </div>
+            <button class="copy-btn" type="button" disabled>コピー</button>
+          </li>
+        `;
+        el.resultCounter.textContent = "0件表示";
+        return;
+      }
+
+      fullNames.forEach((name) => {
+        const given = name.replace(/^.*\s/, "");
+        const isSpecial = isAllowedSpecialName(given);
+
+        const li = document.createElement("li");
+        li.className = "result-item";
+
+        const left = document.createElement("div");
+
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "full-name";
+        nameDiv.textContent = name;
+
+        const meta = document.createElement("div");
+        meta.className = "name-meta";
+        meta.textContent = isSpecial
+          ? `古風枠（1文字＋接尾辞） / 名の長さ: ${charLen(given)}文字`
+          : `基本枠（2文字名） / 名の長さ: ${charLen(given)}文字`;
+
+        left.appendChild(nameDiv);
+        left.appendChild(meta);
+
+        const btn = document.createElement("button");
+        btn.className = "copy-btn";
+        btn.type = "button";
+        btn.textContent = "コピー";
+        btn.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(name);
+            const old = btn.textContent;
+            btn.textContent = "コピー済み";
+            setTimeout(() => (btn.textContent = old), 1000);
+          } catch {
+            const ta = document.createElement("textarea");
+            ta.value = name;
+            ta.style.position = "fixed";
+            ta.style.left = "-9999px";
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+              document.execCommand("copy");
+              const old = btn.textContent;
+              btn.textContent = "コピー済み";
+              setTimeout(() => (btn.textContent = old), 1000);
+            } finally {
+              document.body.removeChild(ta);
+            }
+          }
+        });
+
+        li.appendChild(left);
+        li.appendChild(btn);
+        el.resultList.appendChild(li);
+      });
+
+      el.resultCounter.textContent = `${fullNames.length}件表示`;
+    }
+
+    // ---------- 入力チェック ----------
+    function validateInput() {
+      const surname = el.surname.value.trim();
+      const gender = getSelectedGender();
+
+      if (!surname) {
+        setStatus("苗字を入力してください", "error");
+        return null;
+      }
+      if (surname.length > 20) {
+        setStatus("苗字は20文字以内で入力してください", "error");
+        return null;
+      }
+      if (!gender) {
+        setStatus("性別を選択してください", "error");
+        return null;
+      }
+      if (!pools[gender] || pools[gender].length === 0) {
+        setStatus("名前データがありません", "error");
+        return null;
+      }
+
+      setStatus("", "");
+      return { surname, gender };
+    }
+
+    // ---------- 生成本体 ----------
+    function generateNames() {
+      const valid = validateInput();
+      if (!valid) return;
+
+      const { surname, gender } = valid;
+      const count = Number(el.countSelect.value || 1);
+      const style = el.styleSelect.value || "all";
+
+      const basePool = pools[gender];
+      const rule = styleRules[style] || styleRules.all;
+
+      const filteredPool = basePool.filter(rule);
+
+      if (filteredPool.length === 0) {
+        setStatus("条件に合う候補が見つかりませんでした。雰囲気を変更してください。", "error");
+        return;
+      }
+
+      // 今回の仕様：
+      // 基本は2文字名
+      // 例外は「1文字 + 特例接尾辞」のみ許可
+      const allowedPool = filteredPool.filter(name => isTwoCharName(name) || isAllowedSpecialName(name));
+
+      if (allowedPool.length === 0) {
+        setStatus("条件に合う候補が見つかりませんでした（2文字名 / 特例接尾辞名）。", "error");
+        return;
+      }
+
+      const previousGivenNames = new Set(
+        lastResultsKey ? lastResultsKey.split("||").map(s => s.replace(/^.*\s/, "")) : []
+      );
+
+      const twoCharPool = allowedPool.filter(isTwoCharName);
+      const specialPool = allowedPool.filter(isAllowedSpecialName);
+
+      // 雰囲気に応じて古風枠の出やすさを調整
+      let specialQuota = 0;
+      if (gender === "male") {
+        if (style === "classic") {
+          // 古風なら少し出しやすく（最大で半分程度）
+          specialQuota = Math.min(Math.ceil(count / 2), Math.max(1, Math.floor(count * 0.5)));
+        } else if (style === "all") {
+          specialQuota = Math.min(1, count); // 基本は1件まで
+        } else {
+          specialQuota = 0; // modern/softは基本2文字優先
+        }
+      }
+
+      let picks = [];
+
+      // 1) まず基本2文字で埋める（specialQuota分は残す）
+      const targetTwoCount = Math.max(0, count - specialQuota);
+      const fromTwo = pickRandomUnique(twoCharPool, targetTwoCount, previousGivenNames);
+      picks.push(...fromTwo);
+
+      // 2) 古風接尾辞枠（男のみ主に出る）
+      if (specialQuota > 0 && picks.length < count) {
+        const need = Math.min(specialQuota, count - picks.length);
+        const avoid = new Set([...previousGivenNames, ...picks]);
+        const fromSpecial = pickRandomUnique(specialPool, need, avoid);
+        picks.push(...fromSpecial);
+      }
+
+      // 3) 足りなければ2文字から追加
+      if (picks.length < count) {
+        const need = count - picks.length;
+        const avoid = new Set([...previousGivenNames, ...picks]);
+        const moreTwo = pickRandomUnique(twoCharPool, need, avoid);
+        picks.push(...moreTwo);
+      }
+
+      // 4) それでも足りない場合のみ allowed 全体
+      if (picks.length < count) {
+        const need = count - picks.length;
+        const avoid = new Set([...previousGivenNames, ...picks]);
+        const fallback = pickRandomUnique(allowedPool, need, avoid);
+        picks.push(...fallback);
+      }
+
+      picks = shuffle(unique(picks)).slice(0, count);
+
+      const fullNames = picks.map(given => `${surname} ${given}`);
+      lastResultsKey = fullNames.join("||");
+
+      renderResults(fullNames);
+
+      const twoCharCount = picks.filter(isTwoCharName).length;
+      const specialCount = picks.filter(isAllowedSpecialName).length;
+
+      setStatus(
+        `生成しました（${gender === "male" ? "男" : "女"} / ${styleLabel(style)} / 候補母数 ${allowedPool.length.toLocaleString()}件 / 基本2文字 ${twoCharCount}件 / 古風接尾辞 ${specialCount}件）`,
+        "ok"
+      );
+    }
+
+    // ---------- クリア ----------
+    function clearResults() {
+      renderResults([]);
+      setStatus("結果をクリアしました", "ok");
+      lastResultsKey = "";
+    }
+
+    // ---------- 初期化 ----------
+    function initUI() {
+      el.maleCountTag.textContent = `男候補: ${pools.male.length.toLocaleString()}件`;
+      el.femaleCountTag.textContent = `女候補: ${pools.female.length.toLocaleString()}件`;
+
+      const maleAllowed = pools.male.filter(n => isTwoCharName(n) || isAllowedSpecialName(n));
+      const femaleAllowed = pools.female.filter(n => isTwoCharName(n) || isAllowedSpecialName(n));
+      const maleSpecial = maleAllowed.filter(isAllowedSpecialName);
+      const femaleSpecial = femaleAllowed.filter(isAllowedSpecialName);
+
+      el.debugInfo.innerHTML = [
+        `固定候補（男）: ${pools.stats.maleFixed}件`,
+        `固定候補（女）: ${pools.stats.femaleFixed}件`,
+        `組み合わせ候補（男）: ${pools.stats.maleComposed.toLocaleString()}件`,
+        `組み合わせ候補（女）: ${pools.stats.femaleComposed.toLocaleString()}件`,
+        `特例接尾辞生成（男）: ${pools.stats.maleSpecial.toLocaleString()}件`,
+        `最終候補（男）: ${pools.male.length.toLocaleString()}件`,
+        `最終候補（女）: ${pools.female.length.toLocaleString()}件`,
+        `仕様適用後（男）: ${maleAllowed.length.toLocaleString()}件（うち古風接尾辞 ${maleSpecial.length.toLocaleString()}件）`,
+        `仕様適用後（女）: ${femaleAllowed.length.toLocaleString()}件（うち古風接尾辞 ${femaleSpecial.length.toLocaleString()}件）`,
+        `許可接尾辞: ${SPECIAL_SUFFIXES.join(" / ")}`
+      ].join("<br>");
+
+      renderResults([]);
+    }
+
+    // イベント
+    el.generateBtn.addEventListener("click", generateNames);
+    el.rerollBtn.addEventListener("click", generateNames);
+    el.clearBtn.addEventListener("click", clearResults);
+
+    el.surname.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") generateNames();
+    });
+
+    // 起動
+    initUI();
+  </script>
+</body>
+</html>

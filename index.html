@@ -289,7 +289,7 @@
     <div class="inline-options" aria-label="補助情報">
       <div class="tag" id="maleCountTag">男候補: 計算中...</div>
       <div class="tag" id="femaleCountTag">女候補: 計算中...</div>
-      <div class="tag">基本2文字＋古風接尾辞対応</div>
+      <div class="tag">1文字/2文字＋古風接尾辞対応</div>
       <div class="tag">コピー機能つき</div>
     </div>
 
@@ -310,7 +310,7 @@
         <li class="result-item">
           <div>
             <div class="full-name">ここに名前が表示されます</div>
-            <div class="name-meta">基本は2文字名で生成されます</div>
+            <div class="name-meta">1文字名・2文字名・古風接尾辞名に対応</div>
           </div>
           <button class="copy-btn" type="button" disabled>コピー</button>
         </li>
@@ -331,7 +331,7 @@
     // =========================================================
     // ランダム名付けくん（完成版）
     // 仕様：
-    // - 基本は2文字名
+    // - 一文字名 / 基本2文字名
     // - 例外として「1文字 + 接尾辞（太郎/一郎/之助/次郎...）」を許可
     // - 数千件候補（固定候補 + 組み合わせ）
     // =========================================================
@@ -497,6 +497,10 @@
     }
 
     // ---------- 名前ルール判定 ----------
+    function isOneCharName(name) {
+      return charLen(name) === 1;
+    }
+
     function isTwoCharName(name) {
       return charLen(name) === 2;
     }
@@ -514,7 +518,7 @@
 
     // ---------- 自然さフィルタ ----------
     function isLikelyNatural(name, gender) {
-      if (!name || charLen(name) < 2 || charLen(name) > 5) return false;
+      if (!name || charLen(name) < 1 || charLen(name) > 5) return false;
       if (ngNames.has(name)) return false;
 
       // 同字連打を軽く防ぐ
@@ -604,7 +608,7 @@
           <li class="result-item">
             <div>
               <div class="full-name">ここに名前が表示されます</div>
-              <div class="name-meta">基本は2文字名で生成されます</div>
+              <div class="name-meta">1文字名・2文字名・古風接尾辞名に対応</div>
             </div>
             <button class="copy-btn" type="button" disabled>コピー</button>
           </li>
@@ -628,9 +632,13 @@
 
         const meta = document.createElement("div");
         meta.className = "name-meta";
-        meta.textContent = isSpecial
-          ? `古風枠（1文字＋接尾辞） / 名の長さ: ${charLen(given)}文字`
-          : `基本枠（2文字名） / 名の長さ: ${charLen(given)}文字`;
+        if (isSpecial) {
+          meta.textContent = `古風枠（1文字＋接尾辞） / 名の長さ: ${charLen(given)}文字`;
+        } else if (isOneCharName(given)) {
+          meta.textContent = `一文字名 / 名の長さ: 1文字`;
+        } else {
+          meta.textContent = `基本枠（2文字名） / 名の長さ: ${charLen(given)}文字`;
+        }
 
         left.appendChild(nameDiv);
         left.appendChild(meta);
@@ -717,12 +725,14 @@
       }
 
       // 今回の仕様：
-      // 基本は2文字名
+      // 一文字名 / 基本2文字名
       // 例外は「1文字 + 特例接尾辞」のみ許可
-      const allowedPool = filteredPool.filter(name => isTwoCharName(name) || isAllowedSpecialName(name));
+      const allowedPool = filteredPool.filter(
+        name => isOneCharName(name) || isTwoCharName(name) || isAllowedSpecialName(name)
+      );
 
       if (allowedPool.length === 0) {
-        setStatus("条件に合う候補が見つかりませんでした（2文字名 / 特例接尾辞名）。", "error");
+        setStatus("条件に合う候補が見つかりませんでした（1文字名 / 2文字名 / 特例接尾辞名）。", "error");
         return;
       }
 
@@ -730,6 +740,7 @@
         lastResultsKey ? lastResultsKey.split("||").map(s => s.replace(/^.*\s/, "")) : []
       );
 
+      const oneCharPool = allowedPool.filter(isOneCharName);
       const twoCharPool = allowedPool.filter(isTwoCharName);
       const specialPool = allowedPool.filter(isAllowedSpecialName);
 
@@ -748,12 +759,42 @@
 
       let picks = [];
 
-      // 1) まず基本2文字で埋める（specialQuota分は残す）
-      const targetTwoCount = Math.max(0, count - specialQuota);
+      // 一文字名をどのくらい出すか（控えめ）
+      let oneCharQuota = 0;
+      if (style === "all") {
+        oneCharQuota = count >= 3 ? 1 : 0;
+      } else if (style === "soft") {
+        oneCharQuota = count >= 5 ? 1 : 0;
+      } else if (style === "modern") {
+        oneCharQuota = count >= 3 ? 1 : 0;
+      } else if (style === "classic") {
+        oneCharQuota = 0; // classicは古風接尾辞優先
+      }
+
+      // 女の子は一文字名を少し出しやすくしても自然なので補正（任意）
+      if (gender === "female" && style !== "classic" && count >= 3) {
+        oneCharQuota = Math.max(oneCharQuota, 1);
+      }
+
+      // 枠が重なりすぎて超えないよう調整
+      if (specialQuota + oneCharQuota > count) {
+        oneCharQuota = Math.max(0, count - specialQuota);
+      }
+
+      // 1) まず2文字を優先して埋める（special/oneChar枠を残す）
+      const targetTwoCount = Math.max(0, count - specialQuota - oneCharQuota);
       const fromTwo = pickRandomUnique(twoCharPool, targetTwoCount, previousGivenNames);
       picks.push(...fromTwo);
 
-      // 2) 古風接尾辞枠（男のみ主に出る）
+      // 2) 一文字名を追加
+      if (oneCharQuota > 0 && picks.length < count) {
+        const need = Math.min(oneCharQuota, count - picks.length);
+        const avoid = new Set([...previousGivenNames, ...picks]);
+        const fromOne = pickRandomUnique(oneCharPool, need, avoid);
+        picks.push(...fromOne);
+      }
+
+      // 3) 古風接尾辞枠（男のみ主に出る）
       if (specialQuota > 0 && picks.length < count) {
         const need = Math.min(specialQuota, count - picks.length);
         const avoid = new Set([...previousGivenNames, ...picks]);
@@ -761,7 +802,7 @@
         picks.push(...fromSpecial);
       }
 
-      // 3) 足りなければ2文字から追加
+      // 4) 足りなければ 2文字 → 1文字 の順で追加
       if (picks.length < count) {
         const need = count - picks.length;
         const avoid = new Set([...previousGivenNames, ...picks]);
@@ -769,7 +810,14 @@
         picks.push(...moreTwo);
       }
 
-      // 4) それでも足りない場合のみ allowed 全体
+      if (picks.length < count) {
+        const need = count - picks.length;
+        const avoid = new Set([...previousGivenNames, ...picks]);
+        const moreOne = pickRandomUnique(oneCharPool, need, avoid);
+        picks.push(...moreOne);
+      }
+
+      // 5) それでも足りない場合のみ allowed 全体
       if (picks.length < count) {
         const need = count - picks.length;
         const avoid = new Set([...previousGivenNames, ...picks]);
@@ -784,11 +832,12 @@
 
       renderResults(fullNames);
 
+      const oneCharCount = picks.filter(isOneCharName).length;
       const twoCharCount = picks.filter(isTwoCharName).length;
       const specialCount = picks.filter(isAllowedSpecialName).length;
 
       setStatus(
-        `生成しました（${gender === "male" ? "男" : "女"} / ${styleLabel(style)} / 候補母数 ${allowedPool.length.toLocaleString()}件 / 基本2文字 ${twoCharCount}件 / 古風接尾辞 ${specialCount}件）`,
+        `生成しました（${gender === "male" ? "男" : "女"} / ${styleLabel(style)} / 候補母数 ${allowedPool.length.toLocaleString()}件 / 一文字 ${oneCharCount}件 / 基本2文字 ${twoCharCount}件 / 古風接尾辞 ${specialCount}件）`,
         "ok"
       );
     }
@@ -805,8 +854,14 @@
       el.maleCountTag.textContent = `男候補: ${pools.male.length.toLocaleString()}件`;
       el.femaleCountTag.textContent = `女候補: ${pools.female.length.toLocaleString()}件`;
 
-      const maleAllowed = pools.male.filter(n => isTwoCharName(n) || isAllowedSpecialName(n));
-      const femaleAllowed = pools.female.filter(n => isTwoCharName(n) || isAllowedSpecialName(n));
+      const maleAllowed = pools.male.filter(n => isOneCharName(n) || isTwoCharName(n) || isAllowedSpecialName(n));
+      const femaleAllowed = pools.female.filter(n => isOneCharName(n) || isTwoCharName(n) || isAllowedSpecialName(n));
+
+      const maleOne = maleAllowed.filter(isOneCharName).length;
+      const femaleOne = femaleAllowed.filter(isOneCharName).length;
+      const maleTwo = maleAllowed.filter(isTwoCharName).length;
+      const femaleTwo = femaleAllowed.filter(isTwoCharName).length;
+
       const maleSpecial = maleAllowed.filter(isAllowedSpecialName);
       const femaleSpecial = femaleAllowed.filter(isAllowedSpecialName);
 
@@ -818,8 +873,8 @@
         `特例接尾辞生成（男）: ${pools.stats.maleSpecial.toLocaleString()}件`,
         `最終候補（男）: ${pools.male.length.toLocaleString()}件`,
         `最終候補（女）: ${pools.female.length.toLocaleString()}件`,
-        `仕様適用後（男）: ${maleAllowed.length.toLocaleString()}件（うち古風接尾辞 ${maleSpecial.length.toLocaleString()}件）`,
-        `仕様適用後（女）: ${femaleAllowed.length.toLocaleString()}件（うち古風接尾辞 ${femaleSpecial.length.toLocaleString()}件）`,
+        `仕様適用後（男）: ${maleAllowed.length.toLocaleString()}件（一文字 ${maleOne.toLocaleString()}件 / 2文字 ${maleTwo.toLocaleString()}件 / 古風接尾辞 ${maleSpecial.length.toLocaleString()}件）`,
+        `仕様適用後（女）: ${femaleAllowed.length.toLocaleString()}件（一文字 ${femaleOne.toLocaleString()}件 / 2文字 ${femaleTwo.toLocaleString()}件 / 古風接尾辞 ${femaleSpecial.length.toLocaleString()}件）`,
         `許可接尾辞: ${SPECIAL_SUFFIXES.join(" / ")}`
       ].join("<br>");
 
